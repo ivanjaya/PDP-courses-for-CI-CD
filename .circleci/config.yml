@@ -5,22 +5,51 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+  build_with_node:
     docker:
-      - image: cimg/base:stable
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+      - image: 'cimg/node:16.15.0'  # can use executor by node orbs or we can set manually
     steps:
       - checkout
+      - run: echo "Build started on `date`"                     
+      - node/install-packages:
+          check-cache: detect # try using yarn.lock
+      - run: yarn run build 
+      - persist_to_workspace:
+        # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is
+        # taken to be the root directory of the workspace.
+        root: out
+        # Must be relative path from root
+        paths:
+          - echo-output
+  docs_deploy:
+    docker:
+      - image: 'cimg/node:16.15.0'
+    steps:
+      - checkout
+      - attach_workspace:
+          at: out
       - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
-
+          name: Install and configure dependencies
+          command: |
+            npm install -g --silent gh-pages@2.0.1
+            git config user.email "rio@fivejack.com"
+            git config user.name "Rionardo"
+      - add_ssh_keys:
+          fingerprints:
+            - "79:01:84:8e:7f:53:63:bc:c6:8e:48:3a:cd:d1:60:f3"
+      - run:
+          name: Deploy docs to gh-pages branch
+          command: gh-pages --dotfiles --message "[skip ci] Updates" --dist out
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  say-hello-workflow:
+  build_push_docs_workflow:
     jobs:
-      - say-hello
+      - approve_build: # manual approval          
+          type: approval 
+      - build_with_node : # build started
+          requires:
+            - approve_build
+      - docs_deploy: # manual approval          
+          requires:
+            - build_with_node
