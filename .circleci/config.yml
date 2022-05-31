@@ -18,18 +18,25 @@ jobs:
       - run: yarn run build
       - run: echo "Test started on `date`"
       - run: yarn run test
+      - run: mkdir workspace && mv out workspace/out
+      - persist_to_workspace:
+          root: workspace
+          paths: out
   deploy:
     docker:
       - image: 'cimg/node:16.15.0'
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "a3:fc:07:7d:9b:38:05:99:b2:8f:ec:fb:56:a1:6b:4a"
+      - checkout
       - run: echo "deploy my app"
-      - slack/notify:
-          event: fail
-          mentions: '@EngineeringTeam'
-          template: basic_fail_1
-      - slack/notify:
-          event: pass
-          template: success_tagged_deploy_1
+      - attach_workspace:
+          at: workspace
+      - run: npm install -g --silent gh-pages@2.0.1
+      - run: git config user.email "ivanjaya@fivejack.com"
+      - run: git config user.name "Ivan"
+      - run: gh-pages --dist workspace/out
 workflows:
   version: 2
   build-to-beta-master:   
@@ -43,3 +50,6 @@ workflows:
       - build_with_node : # build started
           requires:
             - approve_build
+      - deploy: # deploy started
+          requires:
+            - build_with_node
