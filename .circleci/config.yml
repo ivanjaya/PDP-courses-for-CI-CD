@@ -13,6 +13,7 @@ jobs:
       - checkout
       - run: echo "Build started on `date`"                     
       - node/install-packages:
+          override-ci-command: yarn
           check-cache: detect # try using yarn.lock
       - run: yarn run build
   test_with_node:
