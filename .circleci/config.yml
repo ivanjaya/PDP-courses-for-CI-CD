@@ -11,15 +11,12 @@ jobs:
       - image: 'cimg/node:16.15.0'  # can use executor by node orbs or we can set manually
     steps:
       - checkout
-      - run: echo "Build started on `date`"                     
+      - run: echo "Build started on `date`"
       - node/install-packages:
           override-ci-command: yarn
           check-cache: detect # try using yarn.lock
       - run: yarn run build
-  test_with_node:
-    docker:
-      - image: 'cimg/node:16.15.0'  # can use executor by node orbs or we can set manually
-    steps:
+      - run: echo "Test started on `date`"
       - run: yarn run test
   deploy:
     docker:
@@ -46,6 +43,3 @@ workflows:
       - build_with_node : # build started
           requires:
             - approve_build
-      - test_with_node : # test started
-          requires:
-            - build_with_node
